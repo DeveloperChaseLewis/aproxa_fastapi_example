@@ -1,0 +1,46 @@
+version: "3.7"
+services:
+  aproxa:
+    image: 025412125743.dkr.ecr.us-west-2.amazonaws.com/aproxa:20220217160215-ce01d9e
+    restart: always
+    depends_on:
+        - service
+    environment:
+      APROXA_MODE: follower
+      HOST: local.a10ai.com
+      PORT: 8080
+      PROXIED_SERVICE_HOST: service
+      PROXIED_SERVICE_PORT: 3000
+      AES_ENCRYPTION_KEY: 'fLPjcDZ/tK9Zx7fBbinFaR83pN+UpW6BARxSCTLaCf8='
+      LEADER_HOST: auth.akasa.com
+      SERVER_CRT: /tls/server.crt
+      SERVER_KEY: /tls/server.key
+    volumes:
+      - ./tls:/tls
+    ports:
+      - 0.0.0.0:8080:8080
+  service:
+    image: service:dev
+    build: ./be
+    depends_on:
+      - db
+    volumes:
+      - ./be:/src
+    working_dir: /src/src
+    entrypoint: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000", "--reload"]
+    environment:
+      DB_NAME: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_SSLMODE: disable
+  db:
+    image: postgres:14-alpine
+    restart: always
+    ports:
+      - 127.0.0.1:5432:5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
